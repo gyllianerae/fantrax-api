@@ -1,7 +1,9 @@
 from flask import Flask, jsonify
+from flask_cors import CORS
 from fantraxapi import FantraxAPI
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 @app.route("/")
 def get_teams():

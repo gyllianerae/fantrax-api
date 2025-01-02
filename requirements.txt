@@ -3,3 +3,4 @@ setuptools
 gunicorn
 fantraxapi
 Flask
+flask-cors
