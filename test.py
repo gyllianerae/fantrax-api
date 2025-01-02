@@ -1,9 +1,14 @@
+from flask import Flask, jsonify
 from fantraxapi import FantraxAPI
 
-last_year = "96idm2rtl8mjk7ol"
-this_year = "yae6qgmoljsmydnu"
+app = Flask(__name__)
 
-api = FantraxAPI(last_year)
+@app.route("/")
+def get_teams():
+    last_year = "96idm2rtl8mjk7ol"
+    api = FantraxAPI(last_year)
+    teams = [team.name for team in api.teams]
+    return jsonify(teams)
 
-sep = '", "'
-print(f'["{sep.join([team.name for team in api.teams])}"]')
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
