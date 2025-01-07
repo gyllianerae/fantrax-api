@@ -84,7 +84,20 @@ def fetch_league_details():
 
         # Fetch standings
         standings = api.standings()
-        league_data["standings"] = standings.ranks if hasattr(standings, 'ranks') else "No standings available"
+        league_data["standings"] = {}
+
+        if hasattr(standings, 'ranks') and isinstance(standings.ranks, dict):
+            for rank, record_obj in standings.ranks.items():
+                # Convert the `Record` object to a dictionary
+                record_data = {
+                    "team_name": record_obj.team.name if hasattr(record_obj, "team") else "Unknown",
+                    "wins": getattr(record_obj, "wins", 0),
+                    "losses": getattr(record_obj, "losses", 0),
+                    "ties": getattr(record_obj, "ties", 0),
+                    "points_for": getattr(record_obj, "points_for", 0),
+                    "points_against": getattr(record_obj, "points_against", 0),
+                }
+                league_data["standings"][rank] = record_data
 
         # Fetch all teams
         league_teams = api.teams
@@ -98,7 +111,7 @@ def fetch_league_details():
             team_name = team.name
             roster = api.roster_info(team_id)
 
-            # Convert roster object to a JSON-friendly format
+            # Convert roster object to JSON-friendly format
             roster_data = {
                 "players": [player.name for player in getattr(roster, "players", [])],
                 "positions": getattr(roster, "positions", {}),
@@ -127,6 +140,7 @@ def fetch_league_details():
     except Exception as e:
         print(f"Error fetching league details: {e}")
         return jsonify({"error": "Unable to fetch league details", "details": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
