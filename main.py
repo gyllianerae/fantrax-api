@@ -83,67 +83,43 @@ def fetch_league_details():
         print("Fetching all available league data...\n")
 
         # Fetch standings
-        print("\n--- League Standings ---")
         standings = api.standings()
         league_data["standings"] = standings.ranks if hasattr(standings, 'ranks') else "No standings available"
-        if isinstance(standings.ranks, dict):
-            for rank, team_info in standings.ranks.items():
-                print(f"{rank}: {team_info}")
 
         # Fetch all teams
-        print("\n--- League Teams ---")
         league_teams = api.teams
-        print(f"Teams Data: {league_teams}")
         team_list = [team.name for team in league_teams]
         league_data["teams"] = team_list
 
         # Fetch rosters of each team
-        print("\n--- Team Rosters ---")
         rosters = {}
         for team in league_teams:
             team_id = team.team_id
             team_name = team.name
             roster = api.roster_info(team_id)
-            rosters[team_name] = roster
-            print(f"Roster for {team_name} (ID: {team_id}): {roster}")
+
+            # Convert roster object to a JSON-friendly format
+            roster_data = {
+                "players": [player.name for player in getattr(roster, "players", [])],
+                "positions": getattr(roster, "positions", {}),
+            }
+            rosters[team_name] = roster_data
+
         league_data["rosters"] = rosters
 
-        # Fetch the trade block
-        print("\n--- Trade Block ---")
-        trade_block = api.trade_block()
-        print(trade_block if trade_block else "No trade block available")
-        league_data["trade_block"] = trade_block if trade_block else "No trade block available"
+        # Other league details (trade block, transactions, etc.)
+        league_data["trade_block"] = api.trade_block() or "No trade block available"
+        league_data["transactions"] = api.transactions() or "No transactions available"
+        league_data["playoffs"] = api.playoffs() or "No playoff information available"
+        league_data["pending_trades"] = api.pending_trades() or "No pending trades available"
 
-        # Fetch transactions
-        print("\n--- League Transactions ---")
-        transactions = api.transactions()
-        print(transactions if transactions else "No transactions available")
-        league_data["transactions"] = transactions if transactions else "No transactions available"
-
-        # Fetch playoff information
-        print("\n--- Playoff Info ---")
-        playoffs = api.playoffs()
-        print(playoffs if playoffs else "No playoff information available")
-        league_data["playoffs"] = playoffs if playoffs else "No playoff information available"
-
-        # Fetch pending trades
-        print("\n--- Pending Trades ---")
-        pending_trades = api.pending_trades()
-        print(pending_trades if pending_trades else "No pending trades available")
-        league_data["pending_trades"] = pending_trades if pending_trades else "No pending trades available"
-
-        # Fetch positions
-        print("\n--- League Positions ---")
         positions = api.positions
         league_positions = {}
         if isinstance(positions, dict):
             for pos_code, position_obj in positions.items():
                 position_name = getattr(position_obj, 'name', 'Unknown Position')
                 max_count = getattr(position_obj, 'max_count', 'Unknown Max Count')
-                print(f"Position: {position_name} (Code: {pos_code}), Max Count: {max_count}")
                 league_positions[position_name] = max_count
-        else:
-            print("No position information available")
         league_data["positions"] = league_positions
 
         return jsonify(league_data)
