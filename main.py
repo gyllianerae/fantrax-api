@@ -1,83 +1,70 @@
-from flask import Flask, jsonify
-from fantrax_wrapper import get_fantrax_api
+from flask import Flask, request, jsonify, redirect, url_for, session
 from fantraxapi import FantraxAPI
-from requests import Session
+from requests import Session as RequestsSession
+import subprocess
+import time
+import os
 import pickle
 
 # Flask app initialization
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  # Secret key for secure session
 
-# League ID and cookie file setup
-last_year = "8wv0vq3im5htwn2z"
-this_year = "dszhdnrhm5h6iic2"  # Update with your league ID if needed
-cookie_file = "fantraxloggedin.cookie"
-
-# Load session cookies
-def load_cookies(cookie_file):
-    session = Session()
-    try:
-        with open(cookie_file, "rb") as f:
-            cookies = pickle.load(f)
-            for cookie in cookies:
-                session.cookies.set(cookie["name"], cookie["value"])
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Cookie file '{cookie_file}' not found.")
-    return session
-
-# Load API session
-try:
-    session = load_cookies(cookie_file)
-    api = FantraxAPI(this_year, session=session)
-except Exception as e:
-    print(f"Error: {e}")
-    exit("Initialization failed.")
-
-# Route: Home
+# Route: Home - Trigger `login.py` and redirect user to complete login
 @app.route('/')
 def index():
-    return jsonify({
-        "status": "Fantrax API is running!",
-        "version": "1.0.0",
-        "available_routes": ["/teams", "/league", "/players", "/fetch_league_details"]
-    })
+    if 'cookies' in session:
+        return redirect(url_for('fetch_league_details'))  # If cookies exist, fetch league data
+    return redirect(url_for('start_login'))
 
-# Route: Fetch all teams
-@app.route('/teams', methods=['GET'])
-def get_teams():
+# Route: Trigger `login.py` and redirect to complete login
+@app.route('/start_login', methods=['GET'])
+def start_login():
     try:
-        teams = [team.name for team in api.teams]
-        return jsonify(teams)
+        # Run `login.py` to open Fantrax login window
+        subprocess.Popen(["python", "login.py"])  # Run login.py in the background
+        time.sleep(5)  # Wait briefly for login to open
+        return '''
+            <h2>Fantrax Login</h2>
+            <p>Please log in to Fantrax in the browser window that opened.</p>
+            <p>Once logged in, <a href="/callback">click here</a> to confirm login and continue.</p>
+        '''
     except Exception as e:
-        print(f"Error fetching teams: {e}")
-        return jsonify({"error": "Unable to fetch teams", "details": str(e)}), 500
+        return f"<h3>Error: {e}</h3>"
 
-# Route: Fetch league information
-@app.route('/league', methods=['GET'])
-def get_league():
+# Route: Callback after login - Capture cookies from `login.py`
+@app.route('/callback', methods=['GET'])
+def callback():
     try:
-        league = {
-            "name": api.league.name,
-            "sport": api.league.sport,
-            "scoring_type": api.league.scoring_type
-        }
-        return jsonify(league)
-    except Exception as e:
-        print(f"Error fetching league data: {e}")
-        return jsonify({"error": "Unable to fetch league data", "details": str(e)}), 500
+        # Instead of reading from a file, simulate fetching cookies from `login.py`
+        with open("fantraxloggedin.cookie", "rb") as f:
+            cookies = pickle.load(f)
 
-# Route: Fetch all players
-@app.route('/players', methods=['GET'])
-def get_players():
-    try:
-        players = [{"name": player.name, "team": player.team.name} for player in api.players]
-        return jsonify(players)
+        # Save cookies in Flask session (stored in the browser)
+        session['cookies'] = cookies
+        return '''
+            <h2>Login Successful!</h2>
+            <p>Cookies have been stored. You can now access your Fantrax data:</p>
+            <p><a href="/fetch_league_details">Fetch League Details</a></p>
+        '''
     except Exception as e:
-        print(f"Error fetching players: {e}")
-        return jsonify({"error": "Unable to fetch players", "details": str(e)}), 500
+        return f"<h3>Error capturing cookies: {e}</h3>"
 
-# Route: Print all league details
+# Route: Fetch all league details using browser-stored cookies
 @app.route('/fetch_league_details', methods=['GET'])
 def fetch_league_details():
+    if 'cookies' not in session:
+        return "<h3>Error: No login session found. Please log in first.</h3>"
+
+    # Load cookies from Flask session
+    cookies = session.get('cookies')
+    api_session = RequestsSession()
+    for cookie in cookies:
+        api_session.cookies.set(cookie["name"], cookie["value"])
+
+    # Initialize Fantrax API session
+    api = FantraxAPI(league_id="dszhdnrhm5h6iic2", session=api_session)
+
     try:
         league_data = {}
         print("Fetching all available league data...\n")
@@ -120,12 +107,19 @@ def fetch_league_details():
 
         league_data["rosters"] = rosters
 
-        # Other league details (trade block, transactions, etc.)
+        # Fetch the trade block
         league_data["trade_block"] = api.trade_block() or "No trade block available"
+
+        # Fetch transactions
         league_data["transactions"] = api.transactions() or "No transactions available"
+
+        # Fetch playoff information
         league_data["playoffs"] = api.playoffs() or "No playoff information available"
+
+        # Fetch pending trades
         league_data["pending_trades"] = api.pending_trades() or "No pending trades available"
 
+        # Fetch positions
         positions = api.positions
         league_positions = {}
         if isinstance(positions, dict):
@@ -141,6 +135,14 @@ def fetch_league_details():
         print(f"Error fetching league details: {e}")
         return jsonify({"error": "Unable to fetch league details", "details": str(e)}), 500
 
+# Route: Logout and clear cookies
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.pop('cookies', None)  # Remove cookies from session
+    return '''
+        <h2>Logged Out</h2>
+        <p>Your session has been cleared. <a href="/">Login again</a>.</p>
+    '''
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
