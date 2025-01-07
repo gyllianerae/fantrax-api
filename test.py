@@ -3,7 +3,6 @@ from fantraxapi import FantraxAPI
 from requests import Session
 import pickle
 
-# Load session cookies from the cookie file
 def load_cookies(cookie_file):
     session = Session()
     try:
@@ -12,34 +11,31 @@ def load_cookies(cookie_file):
             for cookie in cookies:
                 session.cookies.set(cookie["name"], cookie["value"])
     except FileNotFoundError:
-        print(f"Cookie file '{cookie_file}' not found. Please generate it first.")
-        exit()
+        raise FileNotFoundError(f"Cookie file '{cookie_file}' not found.")
     return session
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Replace these IDs with your actual league IDs
 last_year = "8wv0vq3im5htwn2z"
 this_year = "yae6qgmoljsmydnu"
+cookie_file = "fantraxloggedin.cookie"
 
-# Load cookies and create a session
-cookie_file = "fantraxloggedin.cookie"  # Replace with your cookie file path
-session = load_cookies(cookie_file)
+try:
+    session = load_cookies(cookie_file)
+    api = FantraxAPI(last_year, session=session)
+except Exception as e:
+    print(f"Error: {e}")
+    exit("Initialization failed.")
 
-# Initialize Fantrax API with session
-api = FantraxAPI(last_year, session=session)
-
-# Define a route for teams
 @app.route('/teams', methods=['GET'])
 def get_teams():
     try:
         teams = [team.name for team in api.teams]
         return jsonify(teams)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error fetching teams: {e}")
+        return jsonify({"error": "Unable to fetch teams", "details": str(e)}), 500
 
-# Define a route for league data
 @app.route('/league', methods=['GET'])
 def get_league():
     try:
@@ -50,22 +46,25 @@ def get_league():
         }
         return jsonify(league)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error fetching league data: {e}")
+        return jsonify({"error": "Unable to fetch league data", "details": str(e)}), 500
 
-# Define a route for players
 @app.route('/players', methods=['GET'])
 def get_players():
     try:
         players = [{"name": player.name, "team": player.team.name} for player in api.players]
         return jsonify(players)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error fetching players: {e}")
+        return jsonify({"error": "Unable to fetch players", "details": str(e)}), 500
 
-# Define a default route
 @app.route('/')
 def index():
-    return "Fantrax API is running!"
+    return jsonify({
+        "status": "Fantrax API is running!",
+        "version": "1.0.0",
+        "available_routes": ["/teams", "/league", "/players"]
+    })
 
-# Run the Flask app
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
