@@ -1,5 +1,6 @@
 import pickle
 import time
+import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -9,19 +10,27 @@ def login_and_save_cookie():
     print("Starting ChromeDriver...")  # Debug message
     service = Service(ChromeDriverManager().install())
     options = Options()
-    options.add_argument("--headless")  # Run in headless mode (no GUI)
+    options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1600")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
-    options.binary_location = "/opt/google/chrome/google-chrome"  # Change path if needed
 
+    # Possible Chrome binary paths
+    chrome_binary_paths = ["/usr/bin/google-chrome", "/opt/google/chrome/google-chrome", "/usr/local/bin/google-chrome"]
+
+    for path in chrome_binary_paths:
+        if os.path.exists(path):
+            options.binary_location = path
+            print(f"Using Chrome binary at: {path}")
+            break
+    else:
+        raise Exception("Google Chrome binary not found!")
 
     with webdriver.Chrome(service=service, options=options) as driver:
         driver.get("https://www.fantrax.com/login")
         print("Please log in to Fantrax manually...")
-        time.sleep(30)
+        time.sleep(30)  # Time for manual login
         cookies = driver.get_cookies()
         if cookies:
             pickle.dump(cookies, open("fantraxloggedin.cookie", "wb"))
