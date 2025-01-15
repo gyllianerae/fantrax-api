@@ -15,11 +15,12 @@ def login_and_save_cookie():
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1600")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
+    options.binary_location = "/usr/bin/google-chrome"  # Explicit path to Chrome binary
 
     with webdriver.Chrome(service=service, options=options) as driver:
         driver.get("https://www.fantrax.com/login")
         print("Please log in to Fantrax manually...")
-        time.sleep(30)  # Time for manual login
+        time.sleep(30)
         cookies = driver.get_cookies()
         if cookies:
             pickle.dump(cookies, open("fantraxloggedin.cookie", "wb"))
@@ -31,6 +32,5 @@ def login_and_save_cookie():
             with open("login_status.txt", "w") as f:
                 f.write("failed")  # Write failure status
 
-# Add this to call the function
 if __name__ == "__main__":
     login_and_save_cookie()
