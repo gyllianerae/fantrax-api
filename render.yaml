@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fantrax-api
+    env: python
+    plan: free  # or any other plan (starter/professional)
+    build:
+      # Run the `render-build.sh` and then install Python packages
+      command: ./render-build.sh && pip install -r requirements.txt
+    start:
+      command: python main.py
+    envVars:
+      - key: PORT
+        value: 5000

@@ -9,13 +9,17 @@ def login_and_save_cookie():
     print("Starting ChromeDriver...")  # Debug message
     service = Service(ChromeDriverManager().install())
     options = Options()
+    options.add_argument("--headless")  # Run in headless mode (no GUI)
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1600")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
 
     with webdriver.Chrome(service=service, options=options) as driver:
         driver.get("https://www.fantrax.com/login")
         print("Please log in to Fantrax manually...")
-        time.sleep(30)  # Time to manually log in
+        time.sleep(30)  # Time for manual login
         cookies = driver.get_cookies()
         if cookies:
             pickle.dump(cookies, open("fantraxloggedin.cookie", "wb"))
