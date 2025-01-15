@@ -16,14 +16,11 @@ def login_and_save_cookie():
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1600")
 
-    # Possible Chrome binary paths
-    chrome_binary_paths = ["/usr/bin/google-chrome", "/opt/google/chrome/google-chrome", "/usr/local/bin/google-chrome"]
-
-    for path in chrome_binary_paths:
-        if os.path.exists(path):
-            options.binary_location = path
-            print(f"Using Chrome binary at: {path}")
-            break
+    # Check for Chrome binary dynamically
+    chrome_binary_path = os.popen("which google-chrome").read().strip()
+    if chrome_binary_path:
+        options.binary_location = chrome_binary_path
+        print(f"Using Chrome binary at: {chrome_binary_path}")
     else:
         raise Exception("Google Chrome binary not found!")
 

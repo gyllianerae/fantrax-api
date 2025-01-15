@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
-set -e  # Exit if any command fails
+set -e  # Exit immediately if a command exits with a non-zero status
+
+# Update packages
+apt-get update
 
 # Install dependencies
-apt-get update
-apt-get install -y wget unzip
+apt-get install -y wget apt-transport-https ca-certificates gnupg
+
+# Add Google Chrome official key and repository
+wget -qO - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+echo "deb [signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | tee /etc/apt/sources.list.d/google-chrome.list
 
 # Install Google Chrome
-wget -qO- https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O google-chrome.deb
-dpkg -i google-chrome.deb || apt-get install -y --fix-broken
-rm google-chrome.deb
+apt-get update
+apt-get install -y google-chrome-stable
 
-# Print Chrome binary location for verification
-echo "Google Chrome binary path: $(which google-chrome)"
+# Print the installed Chrome version and location
+google-chrome --version
+which google-chrome
