@@ -15,7 +15,8 @@ def login_and_save_cookie():
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1600")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
-    options.binary_location = "/usr/bin/google-chrome"  # Explicit path to Chrome binary
+    options.binary_location = "/opt/google/chrome/google-chrome"  # Change path if needed
+
 
     with webdriver.Chrome(service=service, options=options) as driver:
         driver.get("https://www.fantrax.com/login")

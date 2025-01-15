@@ -5,11 +5,12 @@ set -e  # Exit immediately if a command exits with a non-zero status
 apt-get update
 apt-get install -y wget unzip
 
-# Install Google Chrome stable version
+# Install Google Chrome
 wget -qO- https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O google-chrome.deb
-apt-get install -y ./google-chrome.deb || apt --fix-broken install -y
+dpkg -i google-chrome.deb || apt-get install -y --fix-broken  # Force fix missing dependencies
 
 # Clean up
 rm google-chrome.deb
 
-echo "Google Chrome installed!"
+# Confirm installation path
+echo "Google Chrome installed at: $(which google-chrome)"
